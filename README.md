@@ -30,9 +30,9 @@ local healthHandler = {
 ponysense.bindEvent({ event = "HEALTH", handler = healthHandler})
 ```
 
-#### Push values to your handlers
+#### Send Values
 
-Just initalize the Module to get started:
+Push values to your handlers
 
 ```
 ponysense.sendEventValue("HEALTH", player.health)
