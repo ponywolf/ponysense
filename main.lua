@@ -41,6 +41,8 @@ end
 -- update health on a 1/2 second timer
 timer.performWithDelay(500, updateHealth, -1)
 
+timer.performWithDelay(1000, function () ponysense.key("w","a","s","d","space") end)
+
 
 -- That's about it, enjoy
 
