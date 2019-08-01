@@ -9,12 +9,10 @@ local isSimulator = "simulator" == system.getInfo( "environment" )
 
 -- settings
 local server, game, heartbeatDelay, heartbeatTimer
-local verbose = false --true
+--local verbose = true
 
 -- ENDPOINT DECLARATIONS
 --GS_ENDPOINT_GAME_METADATA = "/game_metadata"
---GS_ENDPOINT_GAME_EVENT = "/game_event"
-
 
 -- icon colors
 M.colors = {}
@@ -30,6 +28,50 @@ M.colors["FUSCHIA"] = 8
 M.colors["PINK"] = 9
 M.colors["RED"] = 10
 M.colors["SILVER"] = 11
+
+M.keys = {
+  a = 4,
+  b = 5,
+  c = 6,
+  d = 7,
+  e = 8,
+  f = 9,
+  g = 10,
+  h = 11,
+  i = 12,
+  j = 13,
+  k = 14,
+  l = 15,
+  m = 16,
+  n = 17,
+  o = 18,
+  p = 19,
+  q = 20,
+  r = 21,
+  s = 22,
+  t = 23,
+  u = 24,
+  v = 25,
+  w = 26,
+  x = 27,
+  y = 28,
+  z = 29,
+  enter = 40,
+  esc = 41,
+  tab = 43,
+  space = 44,
+  ["`"] = 53,
+  right = 79,
+  left = 80,
+  down = 81,
+  up = 82,
+  leftControl = 224,
+  leftShift = 225,
+  leftAlt = 226,
+  rightControl = 228,
+  rightShift = 229,
+  rightAlt = 230,
+}
 
 if isSimulator then isWin = true end -- set for you own debugging purposes pc/mac
 
@@ -75,8 +117,8 @@ function M.initialize(options)
   end
   server = "http://" .. (data.address or "localhost:49801")
   file = nil
+  M.initialized = true
   return server
-
 end
 
 local function networkListener( event )
@@ -88,7 +130,7 @@ local function networkListener( event )
     end    
     if not heartbeatTimer then
       heartbeatDelay = metadata["game_metadata"]["deinitialize_timer_length_ms"] or 15000
-      heartbeatTimer = timer.performWithDelay(heartbeatDelay, M.heartbeat, -1)
+      heartbeatTimer = timer.performWithDelay(math.ceil(heartbeatDelay * .9), M.heartbeat, -1)
     else
       if verbose then 
         print( "GAMESENSE: ", "Heartbeat already started" )
@@ -111,6 +153,11 @@ end
 
 function M.write(endpoint, data)
 
+  if not M.initialized or not server or not (type(server) == "string") then
+    print("WARNING: Server not initialized")
+    return false
+  end
+
   local body = json.encode(data)
   local headers = {}
   headers["Content-Type"] = 'application/json'
@@ -127,12 +174,13 @@ function M.write(endpoint, data)
 end
 
 function M.addGame(name, displayName, developer, iconColor, heartbeat)
+  
   local data = {
     ["game"] = name or "TEST_GAME",
     ["game_display_name"] = displayName or "My testing game",
     ["developer"] = developer or "My Game Studios",
     ["icon_color_id"] = iconColor or 0,
-    ["deinitialize_timer_length_ms"] = heartbeat or 15000,
+    ["deinitialize_timer_length_ms"] = heartbeat or 10000,
   }
   game = data.game
   M.write("/game_metadata", data)
@@ -177,7 +225,6 @@ function M.bindEvent(options)
 end
 
 function M.sendEventValue(event, value)
-  options = options or {}
   local data = {
     ["game"] = game,
     ["event"] = event,
@@ -192,6 +239,31 @@ function M.heartbeat()
   }
   M.write("/game_heartbeat", data)
   if verbose then print ("GAMESENSE:","Heartbeat") end
+end
+
+function M.key(...)
+  if #arg == 0 then return end
+
+  local customZone = {}
+  for i = 1, #arg do
+    if M.keys[arg[i]] then
+      table.insert(customZone, M.keys[arg[i]])
+    end
+  end
+
+  local colorHandler = {
+    device = "rgb-per-key-zones",
+    ["custom-zone-keys"]  = { unpack(customZone) },
+    color = { 
+      gradient =  { 
+        zero = M.RGB(0,0,0),
+        hundred = M.RGB(255,255,255),
+      }
+    },
+    mode = "percent",
+  }
+  M.bindEvent({ event = "ACTIONS", handler = colorHandler})
+  M.sendEventValue("ACTIONS", percent or 100)
 end
 
 function M.removeEvent(event)
